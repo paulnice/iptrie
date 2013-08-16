@@ -78,6 +78,16 @@ func (t *IPTrie) AddRangeNum(sAddr, eAddr uint32, data interface{}) {
 	lte.rangeStart = lts
 }
 
+// AddRangeIp places the range of IP addresses proivded in their 16-byte representation into the IPTrie and saves the associated data for later retrieval.
+//This method is useful when the Ip addresses are being read as an array of bytes say from a binary file.
+func (t *IPTrie) AddRangeIp(sAddr, eAddr []byte, data interface{}) {
+	lts := t.add(sAddr)
+	lts.rangeStart = lts
+	lts.data = data
+	lte := t.add(eAddr)
+	lte.rangeStart = lts
+}
+
 func (t *IPTrie) addStr(addr string) *IPTrie {
 	ip := net.ParseIP(addr)
 	return t.add(ip.To16())

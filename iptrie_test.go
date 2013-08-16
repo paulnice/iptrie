@@ -206,6 +206,18 @@ func TestAddRangeNum(t *testing.T) {
 	}
 }
 
+func TestAddRangeIp(t *testing.T) {
+	tt := NewIPTrie()
+	sAddr := net.ParseIP("192.168.42.1")
+	eAddr := net.ParseIP("192.168.42.254")
+	sBytes := Uint32ToIPv4(3232246273).To16()
+	eBytes := Uint32ToIPv4(3232246526).To16()
+	tt.AddRangeIp(sBytes, eBytes, nil)
+	if !hasRange(tt, sAddr, eAddr) {
+		t.Error("range")
+	}
+}
+
 type testData struct {
 	i int
 }
