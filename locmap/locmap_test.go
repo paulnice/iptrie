@@ -23,63 +23,59 @@ func TestGetServer(t *testing.T) {
 
 	m := NewLocationMap()
 	_, err := m.GetServer(0, 400, "1")
-	if err != nil {
-		fmt.Printf("GetServer: %v\n", err)
-	} else {
+	if err == nil {
 		t.Errorf("GetServer: boundary check failed")
 	}
 	_, err = m.GetServer(-91, 179, "2")
-	if err != nil {
-		fmt.Printf("GetServer: %v\n", err)
-	} else {
+	if err == nil {
 		t.Errorf("GetServer: boundary check failed")
 	}
 }
 
-func checkResources(m *LocationMap, t *testing.T) {
-	fmt.Printf("Update: init resource check\n")
+func checkResources(m *LocationMap, t *testing.T) string {
+
+	result := ""
 	l, _ := m.GetServer(0, 0, "1")
 	if l == "" {
-		t.Errorf("Nothing here")
-	} else {
-		fmt.Printf("Found %s\n", l)
+		t.Errorf("checkResources:GetServer: nothing here")
 	}
+	result += l + ":"
 
 	l, _ = m.GetServer(0, 0, "2")
 	if l == "" {
-		t.Errorf("Nothing here")
-	} else {
-		fmt.Printf("Found %s\n", l)
+		t.Errorf("checkResources:GetServer: nothing here")
 	}
+	result += l + ":"
 
 	l, _ = m.GetServer(0, 0, "3")
 	if l == "" {
-		t.Errorf("Nothing here")
-	} else {
-		fmt.Printf("Found %s\n", l)
+		t.Errorf("checkResouces:GetServer: nothing here")
 	}
+	result += l
+	return result
 }
 
-func checkLocations(m *LocationMap, check string, t *testing.T) {
-	fmt.Printf("%s\n", check)
+func checkLocations(m *LocationMap, t *testing.T) string {
+
+	result := ""
 	l, _ := m.GetServer(1, 2, "1")
 	if l == "" {
-		t.Errorf("Nothing here")
-	} else {
-		fmt.Printf("Found %s\n", l)
+		t.Errorf("checkLocations:GetServer: nothing here")
 	}
+	result += l + ":"
+
 	l, _ = m.GetServer(88, 172, "1")
 	if l == "" {
-		t.Errorf("Nothing here")
-	} else {
-		fmt.Printf("Found %s\n", l)
+		t.Errorf("checkLocations:GetServer: nothing here")
 	}
+	result += l + ":"
+
 	l, _ = m.GetServer(88, 172, "2")
 	if l == "" {
-		t.Errorf("Nothing here")
-	} else {
-		fmt.Printf("Found %s\n", l)
+		t.Errorf("checkLocations:GetServer: nothing here")
 	}
+	result += l
+	return result
 }
 
 func TestUpdate(t *testing.T) {
@@ -89,7 +85,7 @@ func TestUpdate(t *testing.T) {
 	m := NewLocationMap()
 	runtime.GC()
 	after := getMemStats(memstats)
-	fmt.Printf("%fKB\n", math.Abs(float64(after-before)))
+	fmt.Printf("New LocationMap: %fKB\n", math.Abs(float64(after-before)))
 
 	allEntries := list.New()
 	var testValues = []string{
@@ -123,21 +119,32 @@ func TestUpdate(t *testing.T) {
 	}
 	runtime.GC()
 	after = getMemStats(memstats)
-	fmt.Printf("%fKB\n", math.Abs(float64(after-before)))
+	fmt.Printf("Updated LocationMap: %fKB\n", math.Abs(float64(after-before)))
 
-	for i := 0; i <= HiLat*2; i++ {
-		for j := 0; j <= HiLon*2; j++ {
+	for i := 0; i <= maxLat; i++ {
+		for j := 0; j <= maxLon; j++ {
 			location := m.mapp[i][j]
 			if location == nil {
 				t.Errorf("Update: init check failed")
 			}
 		}
 	}
-	checkResources(m, t)
-	checkLocations(m, "Update: init location check", t)
+	result := checkResources(m, t)
+	if result != "154.67.34.2:154.67.34.2:154.67.34.2" {
+		t.Errorf("Update: init checkResources failed")
+	}
+
+	result = checkLocations(m, t)
+	if result != "154.67.34.2:155.67.34.2:154.67.34.2" {
+		t.Errorf("Update: init checkLocations failed")
+	}
 
 	m.Update(nil, allEntries)
-	checkLocations(m, "Update: nil location check", t)
+
+	result = checkLocations(m, t)
+	if result != "154.67.34.2:155.67.34.2:154.67.34.2" {
+		t.Errorf("Update: nil checkLocations failed")
+	}
 
 	e := Data{
 		Status:     false,
@@ -151,9 +158,13 @@ func TestUpdate(t *testing.T) {
 		ff := f.Value.(Data)
 		if ff.ResourceId == "1" && ff.ServerId == "155.67.34.2" && ff.Status {
 			allEntries.Remove(f)
+			break
 		}
 	}
 	m.Update(&e, allEntries)
-	checkLocations(m, "Update: change location check", t)
 
+	result = checkLocations(m, t)
+	if result != "154.67.34.2:154.67.34.2:154.67.34.2" {
+		t.Errorf("Update: change location check")
+	}
 }

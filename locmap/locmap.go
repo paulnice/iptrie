@@ -36,11 +36,11 @@ const (
 )
 
 var (
-	LoLat       = -90
-	HiLat       = 90
-	LoLon       = -180
-	HiLon       = 180
-	BadLocation = errors.New("Geolocation value is out of range")
+	LoLat       float64 = -90
+	HiLat       float64 = 90
+	LoLon       float64 = -180
+	HiLon       float64 = 180
+	BadLocation         = errors.New("Geolocation value is out of range")
 )
 
 // NewLocationMap creates a new location map
@@ -98,7 +98,7 @@ func (m *LocationMap) set(lat, lon int, data *location) *location {
 // GetServer returns the serverId of the closest server for a given geolocation and resourceId.
 func (m *LocationMap) GetServer(lat, lon float64, resourceId string) (string, error) {
 
-	if lat < 0 || lat > maxLat || lon < 0 || lon > maxLon {
+	if lat < LoLat || lat > HiLat || lon < LoLon || lon > HiLon {
 		return "", BadLocation
 	}
 	m.rwmutex.RLock()
@@ -134,6 +134,30 @@ func (m *LocationMap) Update(e *Data, allEntries *list.List) {
 		newMap.addServer(e)
 	} else {
 		newMap.removeServer(e, allEntries)
+	}
+
+	m.rwmutex.Lock()
+	m.mapp = newMap.mapp
+	m.rwmutex.Unlock()
+	m.mutex.Unlock()
+}
+
+// UpdateMulti LocationMap.
+func (m *LocationMap) UpdateMulti(updateEntries, allEntries *list.List) {
+
+	if updateEntries.Front() == nil {
+		return
+	}
+
+	m.mutex.Lock()
+	newMap := m.deepCopy()
+	for e := updateEntries.Front(); e != nil; e = e.Next() {
+		ee := e.Value.(*Data)
+		if ee.Status {
+			newMap.addServer(ee)
+		} else {
+			newMap.removeServer(ee, allEntries)
+		}
 	}
 
 	m.rwmutex.Lock()
