@@ -135,6 +135,51 @@ func TestRndIP(t *testing.T) {
 	}
 }
 
+func TestCidrToRange(t *testing.T) {
+	addrTest := []struct {
+		ip    string
+		first net.IP
+		last  net.IP
+	}{
+		{"192.168.1.0/32", nil, nil},
+		{"192.168.1.0/31", nil, nil},
+		{"192.168.1.0/30", net.ParseIP("192.168.1.1"), net.ParseIP("192.168.1.2")},
+		{"192.168.1.0/29", net.ParseIP("192.168.1.1"), net.ParseIP("192.168.1.6")},
+		{"192.168.1.0/28", net.ParseIP("192.168.1.1"), net.ParseIP("192.168.1.14")},
+		{"192.168.1.0/27", net.ParseIP("192.168.1.1"), net.ParseIP("192.168.1.30")},
+		{"192.168.1.0/26", net.ParseIP("192.168.1.1"), net.ParseIP("192.168.1.62")},
+		{"192.168.1.0/25", net.ParseIP("192.168.1.1"), net.ParseIP("192.168.1.126")},
+		{"192.168.1.0/24", net.ParseIP("192.168.1.1"), net.ParseIP("192.168.1.254")},
+		{"192.168.0.0/16", net.ParseIP("192.168.0.1"), net.ParseIP("192.168.255.254")},
+		{"192.168.240.0/20", net.ParseIP("192.168.240.1"), net.ParseIP("192.168.255.254")},
+		{"192.168.144.0/20", net.ParseIP("192.168.144.1"), net.ParseIP("192.168.159.254")},
+	}
+
+	for i := range addrTest {
+		s, e := cidrToRange(addrTest[i].ip)
+		if s == nil {
+			if addrTest[i].first != nil {
+				t.Fail()
+			}
+		} else {
+			if !s.Equal(addrTest[i].first) {
+				t.Errorf("first = %v", []byte(addrTest[i].first))
+				t.Errorf("s     = %v", []byte(s))
+			}
+		}
+		if e == nil {
+			if addrTest[i].last != nil {
+				t.Fail()
+			}
+		} else {
+			if !e.Equal(addrTest[i].last) {
+				t.Errorf("last  = %v", []byte(addrTest[i].last))
+				t.Errorf("e     = %v", []byte(e))
+			}
+		}
+	}
+}
+
 func TestUint32ToIPv4(t *testing.T) {
 	s := Uint32ToIPv4(3232246374).String()
 	if s != "192.168.42.102" {
@@ -213,6 +258,16 @@ func TestAddRangeIp(t *testing.T) {
 	sBytes := Uint32ToIPv4(3232246273).To16()
 	eBytes := Uint32ToIPv4(3232246526).To16()
 	tt.AddRangeIp(sBytes, eBytes, nil)
+	if !hasRange(tt, sAddr, eAddr) {
+		t.Error("range")
+	}
+}
+
+func TestAddCIDRRange(t *testing.T) {
+	tt := NewIPTrie()
+	sAddr := net.ParseIP("192.168.42.1")
+	eAddr := net.ParseIP("192.168.42.254")
+	tt.AddCIDRRange("192.168.42.0/24", nil)
 	if !hasRange(tt, sAddr, eAddr) {
 		t.Error("range")
 	}

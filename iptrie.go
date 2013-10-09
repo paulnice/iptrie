@@ -78,14 +78,27 @@ func (t *IPTrie) AddRangeNum(sAddr, eAddr uint32, data interface{}) {
 	lte.rangeStart = lts
 }
 
-// AddRangeIp places the range of IP addresses proivded in their 16-byte representation into the IPTrie and saves the associated data for later retrieval.
-//This method is useful when the Ip addresses are being read as an array of bytes say from a binary file.
+// AddRangeIp places the range of IP addresses proivded in their 16-byte
+// representation into the IPTrie and saves the associated data for later
+// retrieval.  This method is useful when the IP addresses are being read as an
+// array of bytes say from a binary file.
 func (t *IPTrie) AddRangeIp(sAddr, eAddr []byte, data interface{}) {
 	lts := t.add(sAddr)
 	lts.rangeStart = lts
 	lts.data = data
 	lte := t.add(eAddr)
 	lte.rangeStart = lts
+}
+
+// AddCIDRRange computes a range of IP addresses from a vavid CIDR string and
+// places the range into the IPTrie and saves the associated data for later
+// retrieval.
+func (t *IPTrie) AddCIDRRange(addr string, data interface{}) {
+	sAddr, eAddr := cidrToRange(addr)
+	if sAddr == nil || eAddr == nil {
+		return
+	}
+	t.AddRangeIp(sAddr, eAddr, data)
 }
 
 func (t *IPTrie) addStr(addr string) *IPTrie {
@@ -202,6 +215,32 @@ func (t *IPTrie) getData(byteSize int) *IPTrie {
 		return t
 	}
 	return nil
+}
+
+// CIDRToRange computes the first and last IP address for a range from a valid
+// CIDR string.  Because of the corner cases around a IPv4 prefix of length > 30
+// (and to keep this function fast) any prefix of length > 30 will return
+// nil for the start and end addresses.
+func cidrToRange(addr string) (net.IP, net.IP) {
+	ip, n, err := net.ParseCIDR(addr)
+	if err != nil {
+		return nil, nil
+	}
+	if pl, _ := n.Mask.Size(); pl > 30 {
+		return nil, nil
+	}
+	al := len(ip)
+	s := make(net.IP, al)
+	e := make(net.IP, al)
+	copy(s, ip)
+	s[al-1] = s[al-1] | 0x01
+	copy(e, s)
+	d := al - len(n.Mask)
+	for i := range n.Mask {
+		e[i+d] = e[i+d] | (n.Mask[i] ^ 0xff)
+	}
+	e[al-1] -= 1
+	return s, e
 }
 
 // IPv4ToUInt32 converts an IPv4 address to an uint32.
