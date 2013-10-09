@@ -11,10 +11,7 @@ import (
 )
 
 const (
-	seed            = 0
-	BenchTrieSizeSm = 15000
-	BenchTrieSizeMd = 200000
-	BenchTrieSizeLg = 2500000
+	seed = 0
 )
 
 var (
@@ -273,6 +270,16 @@ func TestAddCIDRRange(t *testing.T) {
 	}
 }
 
+func TestRmAll(t *testing.T) {
+	tt := NewIPTrie()
+	tt.AddCIDRRange("192.168.42.0/24", nil)
+	tt.Add("192.168.36.102", nil)
+	tt.RmAll()
+	if !isEmpty(tt) {
+		t.Fail()
+	}
+}
+
 type testData struct {
 	i int
 }
@@ -340,170 +347,121 @@ func BenchmarkNewIPTrie(b *testing.B) {
 
 func BenchmarkAddIPv4(b *testing.B) {
 	tt := NewIPTrie()
-	var a string
+	al := make([]string, b.N)
+	for i := 0; i < b.N; i++ {
+		al[i] = rndIPv4().String()
+	}
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
-		b.StopTimer()
-		a = rndIPv4().String()
-		b.StartTimer()
-		tt.Add(a, nil)
+		tt.Add(al[i], nil)
 	}
 }
 
 func BenchmarkAddIPv6(b *testing.B) {
 	tt := NewIPTrie()
-	var a string
+	al := make([]string, b.N)
+	for i := 0; i < b.N; i++ {
+		al[i] = rndIPv6().String()
+	}
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
-		b.StopTimer()
-		a = rndIPv6().String()
-		b.StartTimer()
-		tt.Add(a, nil)
+		tt.Add(al[i], nil)
 	}
 }
 
 func BenchmarkAddNum(b *testing.B) {
 	tt := NewIPTrie()
-	var a uint32
+	al := make([]uint32, b.N)
+	for i := 0; i < b.N; i++ {
+		al[i] = IPv4ToUInt32(rndIPv4())
+	}
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
-		b.StopTimer()
-		a = IPv4ToUInt32(rndIPv4())
-		b.StartTimer()
-		tt.AddNum(a, nil)
+		tt.AddNum(al[i], nil)
 	}
 }
 
 func BenchmarkAddRangeIPv4(b *testing.B) {
 	tt := NewIPTrie()
 	var ip net.IP
-	var s string
-	var e string
-	b.ResetTimer()
+	s := make([]string, b.N)
+	e := make([]string, b.N)
 	for i := 0; i < b.N; i++ {
-		b.StopTimer()
 		ip = rndIPv4()
 		ip[15] = byte(0)
-		s = ip.String()
+		s[i] = ip.String()
 		ip[15] = byte(254)
-		e = ip.String()
-		b.StartTimer()
-		tt.AddRange(s, e, nil)
+		e[i] = ip.String()
+	}
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		tt.AddRange(s[i], e[i], nil)
 	}
 }
 
 func BenchmarkAddRangeIPv6(b *testing.B) {
 	tt := NewIPTrie()
 	var ip net.IP
-	var s string
-	var e string
 	var j int
-	b.ResetTimer()
+	s := make([]string, b.N)
+	e := make([]string, b.N)
 	for i := 0; i < b.N; i++ {
-		b.StopTimer()
 		ip = rndIPv6()
 		for j = 7; j < 16; j++ {
 			ip[j] = byte(0)
 		}
-		s = ip.String()
+		s[i] = ip.String()
 		for j = 7; j < 16; j++ {
 			ip[j] = byte(254)
 		}
-		e = ip.String()
-		b.StartTimer()
-		tt.AddRange(s, e, nil)
+		e[i] = ip.String()
+	}
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		tt.AddRange(s[i], e[i], nil)
 	}
 }
 
 func BenchmarkAddRangeNum(b *testing.B) {
 	tt := NewIPTrie()
 	var ip net.IP
-	var s uint32
-	var e uint32
-	b.ResetTimer()
+	s := make([]uint32, b.N)
+	e := make([]uint32, b.N)
 	for i := 0; i < b.N; i++ {
-		b.StopTimer()
 		ip = rndIPv4()
 		ip[15] = byte(0)
-		s = IPv4ToUInt32(ip)
+		s[i] = IPv4ToUInt32(ip)
 		ip[15] = byte(254)
-		e = IPv4ToUInt32(ip)
-		b.StartTimer()
-		tt.AddRangeNum(s, e, nil)
+		e[i] = IPv4ToUInt32(ip)
+	}
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		tt.AddRangeNum(s[i], e[i], nil)
 	}
 }
 
 func BenchmarkGetIPv4(b *testing.B) {
 	tt := NewIPTrie()
-	buildIPTrie(BenchTrieSizeSm, tt, true, false)
-	var ip net.IP
-	var s string
+	buildIPTrie(b.N, tt, true, false)
+	al := make([]string, b.N)
+	for i := 0; i < b.N; i++ {
+		al[i] = rndIPv4().String()
+	}
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
-		b.StopTimer()
-		ip = rndIPv4()
-		s = ip.String()
-		b.StartTimer()
-		_ = tt.Get(s)
+		_ = tt.Get(al[i])
 	}
 }
 
 func BenchmarkGetIPv6(b *testing.B) {
 	tt := NewIPTrie()
-	buildIPTrie(BenchTrieSizeSm, tt, false, true)
-	var ip net.IP
-	var s string
-	b.ResetTimer()
+	buildIPTrie(b.N, tt, true, false)
+	al := make([]string, b.N)
 	for i := 0; i < b.N; i++ {
-		b.StopTimer()
-		ip = rndIPv6()
-		s = ip.String()
-		b.StartTimer()
-		_ = tt.Get(s)
+		al[i] = rndIPv6().String()
 	}
-}
-
-func BenchmarkGetSm(b *testing.B) {
-	tt := NewIPTrie()
-	buildIPTrie(BenchTrieSizeSm, tt, true, true)
-	var ip net.IP
-	var s string
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
-		b.StopTimer()
-		ip = rndIPv4()
-		s = ip.String()
-		b.StartTimer()
-		_ = tt.Get(s)
-	}
-}
-
-func BenchmarkGetMd(b *testing.B) {
-	tt := NewIPTrie()
-	buildIPTrie(BenchTrieSizeSm, tt, true, true)
-	var ip net.IP
-	var s string
-	b.ResetTimer()
-	for i := 0; i < b.N; i++ {
-		b.StopTimer()
-		ip = rndIPv4()
-		s = ip.String()
-		b.StartTimer()
-		_ = tt.Get(s)
-	}
-}
-
-func BenchmarkGetLg(b *testing.B) {
-	tt := NewIPTrie()
-	buildIPTrie(BenchTrieSizeSm, tt, true, true)
-	var ip net.IP
-	var s string
-	b.ResetTimer()
-	for i := 0; i < b.N; i++ {
-		b.StopTimer()
-		ip = rndIPv4()
-		s = ip.String()
-		b.StartTimer()
-		_ = tt.Get(s)
+		_ = tt.Get(al[i])
 	}
 }

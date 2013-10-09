@@ -39,6 +39,13 @@ func newIPTrie(p *IPTrie) *IPTrie {
 	}
 }
 
+// RmAll removes all entries from the IPTrie.
+func (t *IPTrie) RmAll() {
+	t.m.Lock()
+	defer t.m.Unlock()
+	t.kids = make(map[byte]*IPTrie)
+}
+
 // Add places the IP address into the IPTrie and saves the associated data for
 // later retrieval.
 func (t *IPTrie) Add(addr string, data interface{}) {
